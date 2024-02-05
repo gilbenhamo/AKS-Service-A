@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Live Bitcoin Value</title>
+  </head>
+  <body>
+    <h1>Live Bitcoin Value</h1>
+    <p id="bitcoin-value">Loading...</p>
+    <p id="average-value">Average Value (last 10 minutes): Loading...</p>
+
+    <script>
+      const averageValueElement = document.getElementById("average-value");
+      const BASE_URL = 'https://api.coingecko.com/api/v3/';
+
+      function fetchBitcoinValue() {
+        // Make an API request to get the current Bitcoin value
+        fetch(BASE_URL + "simple/price?ids=bitcoin&vs_currencies=usd")
+          .then((response) => response.json())
+          .then((data) => {
+            const bitcoinValueElement =
+              document.getElementById("bitcoin-value");
+            bitcoinValueElement.textContent = `Current Bitcoin Value: $${data.bitcoin.usd}`;
+          })
+          .catch((error) => {
+            console.error("Error fetching Bitcoin value:", error.message);
+          });
+      }
+      
+      async function getBitcoinAverage() {
+        // Get the current timestamp (in milliseconds)
+        const currentTimestamp = new Date().getTime();
+        // Calculate the timestamp in UNIX
+        const currentGekoTimestamp = Math.floor(currentTimestamp / 1000);
+        const tenMinAgoGekoTimestamp = Math.floor(
+          (currentTimestamp - 10 * 60 * 1000) / 1000
+        );
+
+        try {
+          const historicalResponse = await fetch(
+            `https://api.coingecko.com/api/v3/coins/bitcoin/market_chart/range?vs_currency=usd&from=${tenMinAgoGekoTimestamp}&to=${currentGekoTimestamp}`
+          );
+          const historicalData = await historicalResponse.json();
+          // Calculate the average price
+          const prices = historicalData.prices.map((entry) => entry[1]);
+          const averagePrice =
+            prices.reduce((sum, price) => sum + price, 0) / prices.length;
+          averageValueElement.textContent = `Average Value (last 10 minutes): $${averagePrice.toFixed(2)}`
+        } catch (error) {
+          console.error("Error fetching avg data:", error);
+          return null;
+        }
+      }
+
+
+      // Fetch and update Bitcoin value every minute
+      setInterval(fetchBitcoinValue, 60000); // 1 minute
+      setInterval(getBitcoinAverage, 600000); // 10 minute
+
+      // Initial fetch
+      getBitcoinAverage();
+      fetchBitcoinValue();
+    </script>
+  </body>
+</html>
